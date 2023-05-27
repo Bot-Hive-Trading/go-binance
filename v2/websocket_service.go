@@ -10,9 +10,10 @@ import (
 
 // Endpoints
 const (
-	baseWsMainURL          = "wss://stream.binance.com:9443/ws"
-	baseWsTestnetURL       = "wss://testnet.binance.vision/ws"
-	baseCombinedMainURL    = "wss://stream.binance.com:9443/stream?streams="
+	baseWsMainURL    = "wss://stream.binance.com:9443/ws"
+	baseWsTestnetURL = "wss://testnet.binance.vision/ws"
+	// re point to f steam to have all the necessary parameters (specifically pu value)
+	baseCombinedMainURL    = "wss://fstream.binance.com/stream?streams=streams="
 	baseCombinedTestnetURL = "wss://testnet.binance.vision/stream?streams="
 )
 
@@ -171,6 +172,11 @@ func wsDepthServe(endpoint string, handler WsDepthHandler, errHandler ErrHandler
 		event.Symbol = j.Get("s").MustString()
 		event.LastUpdateID = j.Get("u").MustInt64()
 		event.FirstUpdateID = j.Get("U").MustInt64()
+
+		if j.Get("pu") != nil {
+			event.LastUpdateIDInLastStream = j.Get("pu").MustInt64()
+		}
+
 		bidsLen := len(j.Get("b").MustArray())
 		event.Bids = make([]Bid, bidsLen)
 		for i := 0; i < bidsLen; i++ {
@@ -196,13 +202,14 @@ func wsDepthServe(endpoint string, handler WsDepthHandler, errHandler ErrHandler
 
 // WsDepthEvent define websocket depth event
 type WsDepthEvent struct {
-	Event         string `json:"e"`
-	Time          int64  `json:"E"`
-	Symbol        string `json:"s"`
-	LastUpdateID  int64  `json:"u"`
-	FirstUpdateID int64  `json:"U"`
-	Bids          []Bid  `json:"b"`
-	Asks          []Ask  `json:"a"`
+	Event                    string `json:"e"`
+	Time                     int64  `json:"E"`
+	Symbol                   string `json:"s"`
+	LastUpdateID             int64  `json:"u"`
+	FirstUpdateID            int64  `json:"U"`
+	LastUpdateIDInLastStream int64  `json:"pu"`
+	Bids                     []Bid  `json:"b"`
+	Asks                     []Ask  `json:"a"`
 }
 
 // WsCombinedDepthServe is similar to WsDepthServe, but it for multiple symbols
@@ -237,9 +244,15 @@ func wsCombinedDepthServe(endpoint string, handler WsDepthHandler, errHandler Er
 		symbol := strings.Split(stream, "@")[0]
 		event.Symbol = strings.ToUpper(symbol)
 		data := j.Get("data").MustMap()
+		event.Event = data["e"].(string)
 		event.Time, _ = data["E"].(stdjson.Number).Int64()
 		event.LastUpdateID, _ = data["u"].(stdjson.Number).Int64()
 		event.FirstUpdateID, _ = data["U"].(stdjson.Number).Int64()
+
+		if v, found := data["pu"]; found {
+			event.LastUpdateIDInLastStream, _ = v.(stdjson.Number).Int64()
+		}
+
 		bidsLen := len(data["b"].([]interface{}))
 		event.Bids = make([]Bid, bidsLen)
 		for i := 0; i < bidsLen; i++ {
