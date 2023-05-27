@@ -13,7 +13,7 @@ const (
 	baseWsMainURL    = "wss://stream.binance.com:9443/ws"
 	baseWsTestnetURL = "wss://testnet.binance.vision/ws"
 	// re point to f steam to have all the necessary parameters (specifically pu value)
-	baseCombinedMainURL    = "wss://fstream.binance.com/stream?streams=streams="
+	baseCombinedMainURL    = "wss://fstream.binance.com/stream?streams="
 	baseCombinedTestnetURL = "wss://testnet.binance.vision/stream?streams="
 )
 
