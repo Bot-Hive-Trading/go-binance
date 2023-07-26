@@ -10,7 +10,7 @@ import (
 
 // Endpoints
 const (
-	baseWsMainURL    = "wss://stream.binance.com:9443/ws"
+	baseWsMainURL    = "wss://fstream.binance.com/ws"
 	baseWsTestnetURL = "wss://testnet.binance.vision/ws"
 	// re point to f steam to have all the necessary parameters (specifically pu value)
 	baseCombinedMainURL    = "wss://fstream.binance.com/stream?streams="
@@ -490,67 +490,68 @@ type WsCombinedTradeEvent struct {
 
 // WsUserDataEvent define user data event
 type WsUserDataEvent struct {
-	Event             UserDataEventType `json:"e"`
-	Time              int64             `json:"E"`
-	TransactionTime   int64             `json:"T"`
-	AccountUpdateTime int64             `json:"u"`
-	AccountUpdate     WsAccountUpdateList
-	BalanceUpdate     WsBalanceUpdate
-	OrderUpdate       WsOrderUpdate
-	OCOUpdate         WsOCOUpdate
+	Event             UserDataEventType    `json:"e"`
+	Time              int64                `json:"E"`
+	TransactionTime   int64                `json:"T"`
+	AccountUpdateTime int64                `json:"u"`
+	OrderUpdate       *WsOrderUpdate       `json:"o"`
+	AccountUpdate     *WsAccountUpdateList `json:"a"`
 }
 
 type WsAccountUpdateList struct {
-	WsAccountUpdates []WsAccountUpdate `json:"B"`
+	EventType string             `json:"m"`
+	Balances  []WsBalanceUpdate  `json:"B"`
+	Positions []WsPositionUpdate `json:"P"`
 }
 
 // WsAccountUpdate define account update
-type WsAccountUpdate struct {
-	Asset  string `json:"a"`
-	Free   string `json:"f"`
-	Locked string `json:"l"`
+
+type WsPositionUpdate struct {
+	Symbol              string `json:"s"`
+	PositionAmount      string `json:"pa"`
+	EntryPrice          string `json:"ep"`
+	AccumulatedRealized string `json:"cr"`
+	UnrealizedPL        string `json:"up"`
+	MarginType          string `json:"mt"`
+	IsolatedWallet      string `json:"iw"`
+	PositionSide        string `json:"ps"`
 }
 
 type WsBalanceUpdate struct {
-	Asset  string `json:"a"`
-	Change string `json:"d"`
+	Asset              string `json:"a"`
+	WalletBalance      string `json:"wb"`
+	CrossWalletBalance string `json:"cw"`
+	BalanceChange      string `json:"bc"`
 }
 
 type WsOrderUpdate struct {
-	Symbol                  string          `json:"s"`
-	ClientOrderId           string          `json:"c"`
-	Side                    string          `json:"S"`
-	Type                    string          `json:"o"`
-	TimeInForce             TimeInForceType `json:"f"`
-	Volume                  string          `json:"q"`
-	Price                   string          `json:"p"`
-	StopPrice               string          `json:"P"`
-	TrailingDelta           int64           `json:"d"` // Trailing Delta
-	IceBergVolume           string          `json:"F"`
-	OrderListId             int64           `json:"g"` // for OCO
-	OrigCustomOrderId       string          `json:"C"` // customized order ID for the original order
-	ExecutionType           string          `json:"x"` // execution type for this event NEW/TRADE...
-	Status                  string          `json:"X"` // order status
-	RejectReason            string          `json:"r"`
-	Id                      int64           `json:"i"` // order id
-	LatestVolume            string          `json:"l"` // quantity for the latest trade
-	FilledVolume            string          `json:"z"`
-	LatestPrice             string          `json:"L"` // price for the latest trade
-	FeeAsset                string          `json:"N"`
-	FeeCost                 string          `json:"n"`
-	TransactionTime         int64           `json:"T"`
-	TradeId                 int64           `json:"t"`
-	IsInOrderBook           bool            `json:"w"` // is the order in the order book?
-	IsMaker                 bool            `json:"m"` // is this order maker?
-	CreateTime              int64           `json:"O"`
-	FilledQuoteVolume       string          `json:"Z"` // the quote volume that already filled
-	LatestQuoteVolume       string          `json:"Y"` // the quote volume for the latest trade
-	QuoteVolume             string          `json:"Q"`
-	TrailingTime            int64           `json:"D"` // Trailing Time
-	StrategyId              int64           `json:"j"` // Strategy ID
-	StrategyType            int64           `json:"J"` // Strategy Type
-	WorkingTime             int64           `json:"W"` // Working Time
-	SelfTradePreventionMode string          `json:"V"`
+	Id              int64           `json:"i"` // order id
+	Symbol          string          `json:"s"`
+	ClientOrderId   string          `json:"c"`
+	Side            string          `json:"S"`
+	Type            string          `json:"o"`
+	TimeInForce     TimeInForceType `json:"f"`
+	Volume          string          `json:"q"`
+	OrgPrice        string          `json:"p"`
+	ArgPrice        string          `json:"ap"`
+	StopPrice       string          `json:"sp"`
+	ExecutionType   string          `json:"x"` // execution type for this event NEW/TRADE...
+	Status          string          `json:"X"` // order status
+	LatestVolume    string          `json:"l"` // quantity for the latest trade (latest filled)
+	FilledVolume    string          `json:"z"`
+	LatestPrice     string          `json:"L"` // price for the latest trade
+	FeeAsset        string          `json:"N"`
+	FeeCost         string          `json:"n"`
+	TransactionTime int64           `json:"T"`
+	TradeId         int64           `json:"t"`
+	BidNotional     string          `json:"b"`
+	AskNotional     string          `json:"a"`
+	IsMaker         bool            `json:"m"` // is this order maker?
+	IsReduceOnly    bool            `json:"R"`
+	OrgOrderType    string          `json:"ot"`
+	PositionSide    string          `json:"ps"`
+	ActivationPrice string          `json:"AP"`
+	RealizedProfit  string          `json:"rp"`
 }
 
 type WsOCOUpdate struct {
@@ -582,51 +583,12 @@ func WsUserDataServe(listenKey string, handler WsUserDataHandler, errHandler Err
 	endpoint := fmt.Sprintf("%s/%s", getWsEndpoint(), listenKey)
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
-		j, err := newJSON(message)
-		if err != nil {
-			errHandler(err)
-			return
-		}
 
 		event := new(WsUserDataEvent)
-
 		err = json.Unmarshal(message, event)
 		if err != nil {
 			errHandler(err)
 			return
-		}
-
-		switch UserDataEventType(j.Get("e").MustString()) {
-		case UserDataEventTypeOutboundAccountPosition:
-			err = json.Unmarshal(message, &event.AccountUpdate)
-			if err != nil {
-				errHandler(err)
-				return
-			}
-		case UserDataEventTypeBalanceUpdate:
-			err = json.Unmarshal(message, &event.BalanceUpdate)
-			if err != nil {
-				errHandler(err)
-				return
-			}
-		case UserDataEventTypeExecutionReport:
-			err = json.Unmarshal(message, &event.OrderUpdate)
-			if err != nil {
-				errHandler(err)
-				return
-			}
-			// Unmarshal has case sensitive problem
-			event.TransactionTime = j.Get("T").MustInt64()
-			event.OrderUpdate.TransactionTime = j.Get("T").MustInt64()
-			event.OrderUpdate.Id = j.Get("i").MustInt64()
-			event.OrderUpdate.TradeId = j.Get("t").MustInt64()
-			event.OrderUpdate.FeeAsset = j.Get("N").MustString()
-		case UserDataEventTypeListStatus:
-			err = json.Unmarshal(message, &event.OCOUpdate)
-			if err != nil {
-				errHandler(err)
-				return
-			}
 		}
 
 		handler(event)
