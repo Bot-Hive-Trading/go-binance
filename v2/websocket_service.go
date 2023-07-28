@@ -490,12 +490,18 @@ type WsCombinedTradeEvent struct {
 
 // WsUserDataEvent define user data event
 type WsUserDataEvent struct {
-	Event             UserDataEventType    `json:"e"`
-	Time              int64                `json:"E"`
-	TransactionTime   int64                `json:"T"`
-	AccountUpdateTime int64                `json:"u"`
-	OrderUpdate       *WsOrderUpdate       `json:"o"`
-	AccountUpdate     *WsAccountUpdateList `json:"a"`
+	Event               UserDataEventType      `json:"e"`
+	Time                int64                  `json:"E"`
+	TransactionTime     int64                  `json:"T"`
+	AccountUpdateTime   int64                  `json:"u"`
+	OrderUpdate         *WsOrderUpdate         `json:"o"`
+	AccountUpdate       *WsAccountUpdateList   `json:"a"`
+	AccountConfigUpdate *WSAccountConfigUpdate `json:"ac"`
+}
+
+type WSAccountConfigUpdate struct {
+	Symbol   string `json:"s"`
+	Leverage int    `json:"l"`
 }
 
 type WsAccountUpdateList struct {
