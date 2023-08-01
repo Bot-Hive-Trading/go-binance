@@ -836,21 +836,27 @@ type WsCombinedMarkPriceForAllEvent struct {
 type WsMarkPriceForAllHandler func(event *WsMarkPriceForAllEvent)
 
 // WsCombinedMarkPriceForAllServe websocket that pushes mark price multiple symbol.
-func WsCombinedMarkPriceForAllServe(symbols []string, handler WsMarkPriceForAllHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
-	endpoint := baseCombinedMainURL
-	for _, s := range symbols {
-		endpoint += fmt.Sprintf("%s@bookTicker", strings.ToLower(s)) + "/"
-	}
-	endpoint = endpoint[:len(endpoint)-1]
+func WsCombinedMarkPriceForAllServe(handler WsMarkPriceForAllHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s/!markPrice@arr", getCombinedEndpoint())
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
-		event := new(WsCombinedMarkPriceForAllEvent)
-		err := json.Unmarshal(message, event)
+		j, err := newJSON(message)
 		if err != nil {
 			errHandler(err)
 			return
 		}
-		handler(event.Data)
+
+		data := j.Get("data").MustMap()
+		jsonData, _ := json.Marshal(data)
+
+		event := new(WsMarkPriceForAllEvent)
+		err = json.Unmarshal(jsonData, event)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+
+		handler(event)
 	}
 	return wsServe(cfg, wsHandler, errHandler)
 }
