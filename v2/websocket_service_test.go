@@ -737,48 +737,33 @@ func (s *websocketServiceTestSuite) assertWsAggTradeEventEqual(e, a *WsAggTradeE
 	r.Equal(e.IsBuyerMaker, a.IsBuyerMaker, "IsBuyerMaker")
 }
 
-func (s *websocketServiceTestSuite) assertAccountUpdate(e, a *WsAccountUpdate) {
-	r := s.r()
-	r.Equal(e.Asset, a.Asset)
-	r.Equal(e.Free, a.Free)
-	r.Equal(e.Locked, a.Locked)
-}
-
 func (s *websocketServiceTestSuite) assertOrderUpdate(e, a *WsOrderUpdate) {
 	r := s.r()
 	r.Equal(e.TransactionTime, a.TransactionTime, "TransactionTime")
 	r.Equal(e.Symbol, a.Symbol, "Symbol")
 	r.Equal(e.Volume, a.Volume, "Volume")
-	r.Equal(e.QuoteVolume, a.QuoteVolume, "QuoteVolume")
-	r.Equal(e.Price, a.Price, "Price")
 	r.Equal(e.Side, a.Side, "Side")
 	r.Equal(e.IsMaker, a.IsMaker, "IsMaker")
 	r.Equal(e.Status, a.Status, "Status")
 	r.Equal(e.TimeInForce, a.TimeInForce, "TimeInForce")
 	r.Equal(e.Type, a.Type, "Type")
-	r.Equal(e.CreateTime, a.CreateTime, "CreateTime")
 	r.Equal(e.Id, a.Id, "Id")
 	r.Equal(e.StopPrice, a.StopPrice, "StopPrice")
 	r.Equal(e.TradeId, a.TradeId, "TradeId")
 	r.Equal(e.ExecutionType, a.ExecutionType, "ExecutionType")
 	r.Equal(e.FeeAsset, a.FeeAsset, "FeeAsset")
 	r.Equal(e.FeeCost, a.FeeCost, "FeeCost")
-	r.Equal(e.FilledQuoteVolume, a.FilledQuoteVolume, "FilledQuoteVolume")
 	r.Equal(e.FilledVolume, a.FilledVolume, "FilledVolume")
-	r.Equal(e.IceBergVolume, a.IceBergVolume, "IceBergVolume")
-	r.Equal(e.IsInOrderBook, a.IsInOrderBook, "IsInOrderBook")
 	r.Equal(e.LatestPrice, a.LatestPrice, "LatestPrice")
-	r.Equal(e.OrderListId, a.OrderListId, "LatestQuoteVolume")
-	r.Equal(e.LatestQuoteVolume, a.LatestQuoteVolume, "LatestQuoteVolume")
 	r.Equal(e.LatestVolume, a.LatestVolume, "OrigCustomOrderId")
-	r.Equal(e.OrigCustomOrderId, a.OrigCustomOrderId, "OrigCustomOrderId")
-	r.Equal(e.RejectReason, a.RejectReason, "RejectReason")
 }
 
 func (s *websocketServiceTestSuite) assertBalanceUpdate(e, a *WsBalanceUpdate) {
 	r := s.r()
 	r.Equal(e.Asset, a.Asset)
-	r.Equal(e.Change, a.Change)
+	r.Equal(e.WalletBalance, a.WalletBalance)
+	r.Equal(e.CrossWalletBalance, a.CrossWalletBalance)
+	r.Equal(e.BalanceChange, a.BalanceChange)
 }
 
 func (s *websocketServiceTestSuite) assertUserDataEvent(e, a *WsUserDataEvent) {
@@ -787,12 +772,11 @@ func (s *websocketServiceTestSuite) assertUserDataEvent(e, a *WsUserDataEvent) {
 	r.Equal(e.Time, a.Time, "Time")
 	r.Equal(e.TransactionTime, a.TransactionTime, "TransactionTime")
 	r.Equal(e.AccountUpdateTime, a.AccountUpdateTime, "AccountUpdateTime")
-	for i, e := range e.AccountUpdate.WsAccountUpdates {
-		a := a.AccountUpdate.WsAccountUpdates[i]
-		s.assertAccountUpdate(&e, &a)
+	for i, e := range e.AccountUpdate.Balances {
+		a := a.AccountUpdate.Balances[i]
+		s.assertBalanceUpdate(&e, &a)
 	}
-	s.assertOrderUpdate(&e.OrderUpdate, &a.OrderUpdate)
-	s.assertBalanceUpdate(&e.BalanceUpdate, &a.BalanceUpdate)
+	s.assertOrderUpdate(e.OrderUpdate, a.OrderUpdate)
 }
 
 func (s *websocketServiceTestSuite) testWsUserDataServe(data []byte, expectedEvent *WsUserDataEvent) {
@@ -816,11 +800,13 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 	   "e":"outboundAccountPosition",
 	   "E":1629771130464,
 	   "u":1629771130463,
+	   "m":"ORDER",
 	   "B":[
 	      {
 	         "a":"LTC",
-	         "f":"503.70000000",
-	         "l":"0.00000000"
+	         "wb":"503.70000000",
+	         "cw":"0.00000000",
+			 "bc":"0.00000000"
 	      }
 	   ]
 	}`)
@@ -828,11 +814,13 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 		Event:             "outboundAccountPosition",
 		Time:              1629771130464,
 		AccountUpdateTime: 1629771130463,
-		AccountUpdate: WsAccountUpdateList{
-			[]WsAccountUpdate{
+		AccountUpdate: &WsAccountUpdateList{
+			EventType: "ORDER",
+			Balances: []WsBalanceUpdate{
 				{
 					"LTC",
 					"503.70000000",
+					"0.00000000",
 					"0.00000000",
 				},
 			},
@@ -880,35 +868,25 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeOrderUpdate() {
 		Event:           "executionReport",
 		Time:            1629771130464,
 		TransactionTime: 1629771130463,
-		OrderUpdate: WsOrderUpdate{
-			Symbol:            "LTCUSDT",
-			ClientOrderId:     "MRx05dQCeTigiV1u1rfhUs",
-			Side:              "BUY",
-			Type:              "MARKET",
-			TimeInForce:       "GTC",
-			Volume:            "0.10000000",
-			Price:             "0.00000000",
-			StopPrice:         "0.00000000",
-			IceBergVolume:     "0.00000000",
-			OrderListId:       -1,
-			OrigCustomOrderId: "",
-			ExecutionType:     "TRADE",
-			Status:            "FILLED",
-			RejectReason:      "NONE",
-			Id:                18997,
-			LatestVolume:      "0.10000000",
-			FilledVolume:      "0.10000000",
-			LatestPrice:       "175.37000000",
-			FeeAsset:          "LTC",
-			FeeCost:           "0.00000000",
-			TransactionTime:   1629771130463,
-			TradeId:           1473,
-			IsInOrderBook:     false,
-			IsMaker:           true,
-			CreateTime:        1629771130463,
-			FilledQuoteVolume: "17.53700000",
-			LatestQuoteVolume: "17.53700000",
-			QuoteVolume:       "0.00000000",
+		OrderUpdate: &WsOrderUpdate{
+			Symbol:          "LTCUSDT",
+			ClientOrderId:   "MRx05dQCeTigiV1u1rfhUs",
+			Side:            "BUY",
+			Type:            "MARKET",
+			TimeInForce:     "GTC",
+			Volume:          "0.10000000",
+			StopPrice:       "0.00000000",
+			ExecutionType:   "TRADE",
+			Status:          "FILLED",
+			Id:              18997,
+			LatestVolume:    "0.10000000",
+			FilledVolume:    "0.10000000",
+			LatestPrice:     "175.37000000",
+			FeeAsset:        "LTC",
+			FeeCost:         "0.00000000",
+			TransactionTime: 1629771130463,
+			TradeId:         1473,
+			IsMaker:         true,
 		},
 	}
 	s.testWsUserDataServe(data, expectedEvent)
