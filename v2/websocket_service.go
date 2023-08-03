@@ -811,3 +811,52 @@ func WsAllBookTickerServe(handler WsBookTickerHandler, errHandler ErrHandler) (d
 	}
 	return wsServe(cfg, wsHandler, errHandler)
 }
+
+// WsMarkPriceEvent define websocket markPriceUpdate event.
+type WsMarkPriceEvent struct {
+	Event                string `json:"e"`
+	Time                 int64  `json:"E"`
+	Symbol               string `json:"s"`
+	MarkPrice            string `json:"p"`
+	IndexPrice           string `json:"i"`
+	EstimatedSettlePrice string `json:"P"`
+	FundingRate          string `json:"r"`
+	NextFundingTime      int64  `json:"T"`
+}
+
+// WsMarkPriceForAllEvent defines an array of websocket markPriceUpdate events.
+type WsMarkPriceForAllEvent []*WsMarkPriceEvent
+
+type WsCombinedMarkPriceForAllEvent struct {
+	Data   *WsMarkPriceForAllEvent `json:"data"`
+	Stream string                  `json:"stream"`
+}
+
+// WsMarkPriceHandler handle websocket that pushes updates to the markPrice for all symbol.
+type WsMarkPriceForAllHandler func(event *WsMarkPriceForAllEvent)
+
+// WsCombinedMarkPriceForAllServe websocket that pushes mark price multiple symbol.
+func WsCombinedMarkPriceForAllServe(handler WsMarkPriceForAllHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s!markPrice@arr", getCombinedEndpoint())
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		j, err := newJSON(message)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+
+		data := j.Get("data")
+		jsonData, _ := json.Marshal(data)
+
+		event := new(WsMarkPriceForAllEvent)
+		err = json.Unmarshal(jsonData, event)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+
+		handler(event)
+	}
+	return wsServe(cfg, wsHandler, errHandler)
+}
