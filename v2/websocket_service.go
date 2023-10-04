@@ -415,8 +415,9 @@ func WsCombinedAggTradeServe(symbols []string, handler WsAggTradeHandler, errHan
 }
 
 type WsAssetIndexEvent struct {
+	Event                 string `json:"e"`
 	Symbol                string `json:"s"`
-	Time                  uint64 `json:"E"`
+	Time                  int64  `json:"E"`
 	Index                 string `json:"i"`
 	BidBuffer             string `json:"b"`
 	AskBuffer             string `json:"a"`
