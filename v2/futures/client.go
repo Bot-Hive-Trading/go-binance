@@ -381,6 +381,11 @@ func (c *Client) NewSetServerTimeService() *SetServerTimeService {
 	return &SetServerTimeService{c: c}
 }
 
+// NewAssetIndexService init AssetIndex service
+func (c *Client) NewAssetIndexService() *AssetIndexService {
+	return &AssetIndexService{c: c}
+}
+
 // NewDepthService init depth service
 func (c *Client) NewDepthService() *DepthService {
 	return &DepthService{c: c}
