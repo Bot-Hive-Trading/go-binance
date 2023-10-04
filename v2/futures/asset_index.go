@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// DepthResponse define depth info with bids and asks
+// AssetIndexService define single asset index entry
 type AssetIndexResponse struct {
 	Symbol                string `json:"symbol"`
 	Time                  int64  `json:"time"`
@@ -20,7 +20,7 @@ type AssetIndexResponse struct {
 	AutoExchangeAskRate   string `json:"autoExchangeAskRate"`
 }
 
-// DepthService show depth info
+// AssetIndexService returns asset index
 type AssetIndexService struct {
 	c *Client
 }

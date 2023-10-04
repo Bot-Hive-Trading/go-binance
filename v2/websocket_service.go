@@ -414,6 +414,37 @@ func WsCombinedAggTradeServe(symbols []string, handler WsAggTradeHandler, errHan
 	return wsServe(cfg, wsHandler, errHandler)
 }
 
+type WsAssetIndexEvent struct {
+	Symbol                string `json:"s"`
+	Time                  int64  `json:"E"`
+	Index                 string `json:"i"`
+	BidBuffer             string `json:"b"`
+	AskBuffer             string `json:"a"`
+	BidRate               string `json:"B"`
+	AskRate               string `json:"A"`
+	AutoExchangeBidBuffer string `json:"q"`
+	AutoExchangeAskBuffer string `json:"g"`
+	AutoExchangeBidRate   string `json:"Q"`
+	AutoExchangeAskRate   string `json:"G"`
+}
+
+type WsAssetIndexHandler func(event []WsAssetIndexEvent)
+
+func WsAssetIndexServer(handler WsAssetIndexHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s/!assetIndex@arr", getWsEndpoint())
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		event := []WsAssetIndexEvent{}
+		err := json.Unmarshal(message, &event)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		handler(event)
+	}
+	return wsServe(cfg, wsHandler, errHandler)
+}
+
 // WsAggTradeEvent define websocket aggregate trade event
 type WsAggTradeEvent struct {
 	Event                 string `json:"e"`
@@ -435,7 +466,7 @@ type WsCombinedTradeHandler func(event *WsCombinedTradeEvent)
 
 // WsTradeServe serve websocket handler with a symbol
 func WsTradeServe(symbol string, handler WsTradeHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
-	endpoint := fmt.Sprintf("%s/%s@trade", getWsEndpoint(), strings.ToLower(symbol))
+	endpoint := fmt.Sprintf("%s/!assetIndex@arr", getWsEndpoint(), strings.ToLower(symbol))
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
 		event := new(WsTradeEvent)
